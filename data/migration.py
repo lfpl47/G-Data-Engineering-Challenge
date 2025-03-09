@@ -1,77 +1,55 @@
-import yaml
 import pandas as pd
-from sqlalchemy import create_engine
-from api.custom_logger import CustomLogger
+from core.custom_logger import CustomLogger
+from core.db_manager import DBManager
+from core.config_manager import ConfigManager
 
 class Migration:
     """
-    Clase para migrar datos desde archivos CSV a una base de datos PostgreSQL.
-    Utiliza un archivo de configuración YAML para obtener rutas de archivos CSV y parámetros de conexión.
-    Emplea la clase CustomLogger para registrar el flujo de ejecución y errores.
+    Clase Migration para migrar datos desde archivos CSV a una base de datos PostgreSQL.
+    Utiliza DBManager para obtener la conexión y ConfigManager para la configuración.
     """
     def __init__(self, config_path="config.yaml"):
-        """
-        Inicializa la migración: configura el logger, carga la configuración y crea el motor de la base de datos.
-        :param config_path: Ruta del archivo YAML de configuración (por defecto "config.yaml").
-        """
         self.logger = CustomLogger(self.__class__.__name__)
         self.logger.info("Inicializando migración.")
-        self.config = self.load_config(config_path)
-        self.logger.info("Configuración cargada.")
-        self.engine = self.get_db_engine()
-
-    def load_config(self, config_path: str) -> dict:
-        """
-        Carga la configuración desde un archivo YAML.
-        :param config_path: Ruta al archivo YAML de configuración.
-        :return: Diccionario con la configuración cargada.
-        """
-        with open(config_path, "r") as file:
-            config = yaml.safe_load(file)
-        return config
+        
+        # Cargar la configuración usando ConfigManager
+        self.config = ConfigManager.load_config(config_path)
+        
+        # Inicializar DBManager y obtener el engine
+        db_manager = DBManager(config_path)
+        self.engine = db_manager.get_engine()
+        
+        self.logger.info("Conexión a la base de datos establecida.")
 
     def read_csv_files(self):
         """
-        Lee los archivos CSV especificados en la configuración.
-        :return: Tres DataFrames correspondientes a hired_employees, departments y jobs.
+        Lee los archivos CSV especificados en la configuración usando los metadatos de columnas definidos en el YAML.
+        :return: Tuple con DataFrames para hired_employees, departments y jobs.
         """
-        self.logger.info("Leyendo archivos CSV...")
+        self.logger.info("Leyendo archivos CSV con metadatos de columnas...")
         csv_config = self.config['csv']
-        # Leer cada archivo CSV usando pandas
-        hired_employees = pd.read_csv(csv_config['hired_employees'])
-        departments = pd.read_csv(csv_config['departments'])
-        jobs = pd.read_csv(csv_config['jobs'])
-        self.logger.info("Archivos CSV leídos correctamente.")
+        
+        hired_conf = csv_config['hired_employees']
+        hired_employees = pd.read_csv(hired_conf['path'], header=None, names=hired_conf['columns'])
+        
+        dept_conf = csv_config['departments']
+        departments = pd.read_csv(dept_conf['path'], header=0, names=dept_conf['columns'])
+        
+        jobs_conf = csv_config['jobs']
+        jobs = pd.read_csv(jobs_conf['path'], header=0, names=jobs_conf['columns'])
+        
+        self.logger.info("Archivos CSV leídos y columnas asignadas correctamente.")
         return hired_employees, departments, jobs
 
-    def get_db_engine(self):
-        """
-        Crea y retorna un motor SQLAlchemy para conectarse a la base de datos PostgreSQL.
-        Se construye la URL de conexión utilizando los parámetros (usuario, contraseña, host, puerto, base de datos)
-        especificados en la configuración YAML.
-        :return: Objeto engine de SQLAlchemy.
-        """
-        self.logger.info("Creando motor de base de datos...")
-        db_config = self.config['database']
-        user = db_config['user']
-        password = db_config['password']
-        host = db_config['host']
-        port = db_config['port']
-        dbname = db_config['dbname']
-        db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
-        engine = create_engine(db_url)
-        self.logger.info("Motor de base de datos creado.")
-        return engine
 
     def migrate_data(self):
         """
         Orquesta la migración de datos:
-        1. Lee los archivos CSV definidos en la configuración.
-        2. Inserta los datos en las tablas correspondientes en la base de datos, reemplazando las tablas si existen.
-        3. Registra cada paso y captura cualquier error que ocurra durante la migración.
+          - Lee los archivos CSV.
+          - Inserta los datos en las tablas correspondientes en la base de datos.
+          - Registra cada paso del proceso.
         """
         self.logger.info("Iniciando migración de datos...")
-        # Leer los datos de los archivos CSV
         hired_employees, departments, jobs = self.read_csv_files()
         self.logger.info("Insertando datos en la base de datos...")
         try:

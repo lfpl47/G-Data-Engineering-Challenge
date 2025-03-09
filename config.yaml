@@ -1,10 +1,16 @@
 csv:
-  hired_employees: "./data/sources/hired_employees.csv"
-  departments: "./data/sources/departments.csv"
-  jobs: "./data/sources/jobs.csv"
+  hired_employees:
+    path: "./data/sources/hired_employees.csv"
+    columns: ["id", "name", "datetime", "department_id", "job_id"]
+  departments:
+    path: "./data/sources/departments.csv"
+    columns: ["id", "department"]
+  jobs:
+    path: "./data/sources/jobs.csv"
+    columns: ["id", "job"]
 
 database:
-  host: "postgres"      # Alias definido en docker-compose.yaml
+  host: "postgres"
   port: 5432
   user: "challenge_user"
   password: "challenge_password"

@@ -1,0 +1,13 @@
+curl -X POST "http://localhost:8000/ingest"   -H "Content-Type: application/json"   -d @payload.json
+
+docker-compose up -d --build
+
+docker-compose logs -f app
+
+docker-compose exec postgres psql -U challenge_user -d challenge_database
+\dt
+
+docker-compose exec app python -m data.migration
+
+docker-compose restart
+
