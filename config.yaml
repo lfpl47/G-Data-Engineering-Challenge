@@ -1,0 +1,11 @@
+csv:
+  hired_employees: "./data/sources/hired_employees.csv"
+  departments: "./data/sources/departments.csv"
+  jobs: "./data/sources/jobs.csv"
+
+database:
+  host: "postgres"      # Alias definido en docker-compose.yaml
+  port: 5432
+  user: "challenge_user"
+  password: "challenge_password"
+  dbname: "challenge_database"

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: challenge_api_fastapi
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      - CONFIG_PATH=/app/config.yaml  # Si queremos pasar la ruta al contenedor
+    volumes:
+      - ./:/app
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: challenge_user
+      POSTGRES_PASSWORD: challenge_password
+      POSTGRES_DB: challenge_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
