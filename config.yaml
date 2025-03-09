@@ -1,17 +1,31 @@
+backup:
+  backup_dir: data/backup
+  files:
+    departments: data/backup/departments.avro
+    hired_employees: data/backup/hired_employees.avro
+    jobs: data/backup/jobs.avro
 csv:
-  hired_employees:
-    path: "./data/sources/hired_employees.csv"
-    columns: ["id", "name", "datetime", "department_id", "job_id"]
   departments:
-    path: "./data/sources/departments.csv"
-    columns: ["id", "department"]
+    columns:
+    - id
+    - department
+    path: data/sources/departments.csv
+  hired_employees:
+    columns:
+    - id
+    - name
+    - datetime
+    - department_id
+    - job_id
+    path: data/sources/hired_employees.csv
   jobs:
-    path: "./data/sources/jobs.csv"
-    columns: ["id", "job"]
-
+    columns:
+    - id
+    - job
+    path: data/sources/jobs.csv
 database:
-  host: "postgres"
+  dbname: challenge_database
+  host: postgres
+  password: challenge_password
   port: 5432
-  user: "challenge_user"
-  password: "challenge_password"
-  dbname: "challenge_database"
+  user: challenge_user

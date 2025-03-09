@@ -7,7 +7,23 @@ docker-compose logs -f app
 docker-compose exec postgres psql -U challenge_user -d challenge_database
 \dt
 
+truncate table departments;
+truncate table hired_employees;
+truncate table jobs;
+
+select * from departments;
+select * from hired_employees;
+select * from jobs;
+
+
 docker-compose exec app python -m data.migration
 
 docker-compose restart
 
+docker-compose exec app python -m tests.query_tables
+docker-compose exec app python -m data.backup backup
+docker-compose exec app python -m data.backup restore
+
+
+
+curl -X POST "http://localhost:8000/ingest"   -H "Content-Type: application/json"   -d @payload.json
