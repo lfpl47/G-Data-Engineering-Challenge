@@ -2,10 +2,17 @@
   "hired_employees": [
     {
       "id": 1,
-      "name": "Juan TEST",
+      "name": "Juan Pérez TEST",
       "datetime": "2023-08-15T10:00:00Z",
       "department_id": 1,
       "job_id": 1
+    },
+    {
+      "id": 2,
+      "name": "",
+      "datetime": "2021-07-27T16:02:08Z",
+      "department_id": 1,
+      "job_id": 2
     }
   ],
   "departments": [
@@ -17,7 +24,7 @@
   "jobs": [
     {
       "id": 1,
-      "job": "Analista TEST"
+      "job": ""
     }
   ]
 }
