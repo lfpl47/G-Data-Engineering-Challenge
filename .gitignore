@@ -82,4 +82,7 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 
+# Ignorar archivos de logs generados
+data/logs/*
+
 *.script.txt

@@ -9,7 +9,7 @@ services:
     depends_on:
       - postgres
     environment:
-      - CONFIG_PATH=/app/config.yaml  # Si queremos pasar la ruta al contenedor
+      - CONFIG_PATH=/app/config.yaml
     volumes:
       - ./:/app
 

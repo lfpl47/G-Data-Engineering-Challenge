@@ -29,3 +29,5 @@ database:
   password: challenge_password
   port: 5432
   user: challenge_user
+logs:
+  path: data/logs

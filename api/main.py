@@ -9,8 +9,12 @@ from core.config_manager import ConfigManager
 from data.backup import backup_table, restore_table
 from data.migration import Migration
 import traceback
+from data.validator import process_and_insert 
+from api.metrics import router as metrics_router
 
-app = FastAPI(title="Data Ingestion A PI", description="API para ingesta de nuevos datos", version="1.0")
+
+app = FastAPI(title="Data Ingestion API", description="API para ingesta de nuevos datos", version="1.0")
+app.include_router(metrics_router)
 logger = CustomLogger("MainAPI")
 
 
@@ -24,12 +28,7 @@ class HiredEmployee(BaseModel):
     @field_validator("datetime")
     @classmethod
     def validate_datetime(cls, value: str) -> str:
-        """
-        Valida que el campo 'datetime' esté en formato ISO.
-        Se permite la 'Z' para designar zona UTC.
-        """
         try:
-            # Reemplaza 'Z' por '+00:00' para que fromisoformat lo entienda
             datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             raise ValueError("El campo 'datetime' debe estar en formato ISO.")
@@ -46,24 +45,17 @@ class Job(BaseModel):
 class IngestData(BaseModel):
     """
     Modelo que agrupa los datos para la ingesta en un solo request.
-    Se requiere que cada lista contenga entre 1 y 1000 registros.
+    Cada lista debe contener entre 1 y 1000 registros.
     """
     hired_employees: List[HiredEmployee] = Field(..., min_items=1, max_items=1000)
     departments: List[Department] = Field(..., min_items=1, max_items=1000)
     jobs: List[Job] = Field(..., min_items=1, max_items=1000)
 
 def get_db_engine():
-    """
-    Dependencia que retorna el engine de la base de datos usando DBManager.
-    """
     db_manager = DBManager()
     return db_manager.get_engine()
 
 def get_expected_columns(table_name: str) -> List[str]:
-    """
-    Retorna la lista de columnas esperadas para la tabla indicada,
-    según lo definido en la sección 'csv' del archivo de configuración.
-    """
     config = ConfigManager.load_config()
     return config['csv'][table_name]['columns']
 
@@ -71,30 +63,29 @@ def get_expected_columns(table_name: str) -> List[str]:
 def ingest_data(data: IngestData, engine = Depends(get_db_engine)):
     logger.info("Solicitud recibida para ingesta de datos.")
     try:
-
+        # Convertir modelos a DataFrames
         df_hired = pd.DataFrame([emp.model_dump() for emp in data.hired_employees])
         df_departments = pd.DataFrame([dep.model_dump() for dep in data.departments])
         df_jobs = pd.DataFrame([job.model_dump() for job in data.jobs])
         
+        # Validar e insertar cada tabla utilizando el proceso de validación ("insercion")
         expected_hired = set(get_expected_columns("hired_employees"))
         if set(df_hired.columns) != expected_hired:
             logger.error(f"Las columnas de hired_employees no coinciden. Esperado: {expected_hired}, Recibido: {set(df_hired.columns)}")
             raise HTTPException(status_code=400, detail="Error en el formato de datos de hired_employees")
+        process_and_insert(df_hired, list(expected_hired), "hired_employees", engine, process_type="insercion")
         
         expected_dept = set(get_expected_columns("departments"))
         if set(df_departments.columns) != expected_dept:
             logger.error(f"Las columnas de departments no coinciden. Esperado: {expected_dept}, Recibido: {set(df_departments.columns)}")
             raise HTTPException(status_code=400, detail="Error en el formato de datos de departments")
+        process_and_insert(df_departments, list(expected_dept), "departments", engine, process_type="insercion")
         
         expected_jobs = set(get_expected_columns("jobs"))
         if set(df_jobs.columns) != expected_jobs:
             logger.error(f"Las columnas de jobs no coinciden. Esperado: {expected_jobs}, Recibido: {set(df_jobs.columns)}")
             raise HTTPException(status_code=400, detail="Error en el formato de datos de jobs")
-        
-        with engine.begin() as connection:
-            df_hired.to_sql("hired_employees", con=connection, if_exists="append", index=False)
-            df_departments.to_sql("departments", con=connection, if_exists="append", index=False)
-            df_jobs.to_sql("jobs", con=connection, if_exists="append", index=False)
+        process_and_insert(df_jobs, list(expected_jobs), "jobs", engine, process_type="insercion")
         
         logger.info("Datos ingresados correctamente en la base de datos.")
         return {"message": "Data ingested successfully"}
@@ -102,6 +93,7 @@ def ingest_data(data: IngestData, engine = Depends(get_db_engine)):
         logger.error(f"Error al ingerir datos: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Error ingesting data")
+
     
 
 @app.post("/backup", summary="Realiza backup de tablas")

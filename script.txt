@@ -2,15 +2,16 @@ curl -X POST "http://localhost:8000/ingest"   -H "Content-Type: application/json
 
 docker-compose up -d --build
 docker-compose down
+docker-compose restart
 
 docker-compose logs -f app
 
 docker-compose exec postgres psql -U challenge_user -d challenge_database
 \dt
 
-truncate table departments;
-truncate table hired_employees;
-truncate table jobs;
+drop table departments;
+drop table hired_employees;
+drop table jobs;
 
 select * from departments;
 select * from hired_employees;
@@ -18,6 +19,8 @@ select * from jobs;
 
 
 docker-compose exec app python -m data.migration
+docker-compose exec app python -m tests.query_tables
+
 
 docker-compose restart
 
