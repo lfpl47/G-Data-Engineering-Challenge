@@ -2,13 +2,13 @@ import logging
 
 class CustomLogger:
     """
-    Clase CustomLogger que encapsula la configuración del logging.
-    Proporciona métodos para registrar mensajes en diferentes niveles: debug, info, warning y error.
+    CustomLogger class encapsulates the logging configuration.
+    It provides methods to log messages at different levels: debug, info, warning, and error.
     """
     def __init__(self, name: str):
         """
-        Inicializa el logger con un nombre específico y configura el formato y el nivel de logging.
-        :param name: Nombre del logger, típicamente el nombre de la clase o módulo.
+        Initializes the logger with a specific name and sets the logging format and level.
+        :param name: The name of the logger, typically the class or module name.
         """
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
@@ -24,28 +24,28 @@ class CustomLogger:
 
     def debug(self, message: str):
         """
-        Registra un mensaje a nivel DEBUG.
-        :param message: Mensaje a registrar.
+        Logs a message at DEBUG level.
+        :param message: The message to log.
         """
         self.logger.debug(message)
 
     def info(self, message: str):
         """
-        Registra un mensaje a nivel INFO.
-        :param message: Mensaje a registrar.
+        Logs a message at INFO level.
+        :param message: The message to log.
         """
         self.logger.info(message)
 
     def warning(self, message: str):
         """
-        Registra un mensaje a nivel WARNING.
-        :param message: Mensaje a registrar.
+        Logs a message at WARNING level.
+        :param message: The message to log.
         """
         self.logger.warning(message)
 
     def error(self, message: str):
         """
-        Registra un mensaje a nivel ERROR.
-        :param message: Mensaje a registrar.
+        Logs a message at ERROR level.
+        :param message: The message to log.
         """
         self.logger.error(message)

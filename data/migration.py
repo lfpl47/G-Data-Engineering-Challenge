@@ -1,28 +1,27 @@
-# data/migration.py
 import pandas as pd
 from core.custom_logger import CustomLogger
 from core.db_manager import DBManager
 from core.config_manager import ConfigManager
-from data.validator import process_and_insert  # Importamos el validador
+from data.validator import process_and_insert  # Import the validator
 
 class Migration:
     """
-    Clase para migrar datos desde archivos CSV a la base de datos PostgreSQL.
+    Class to migrate data from CSV files to a PostgreSQL database.
     """
     def __init__(self, config_path="config.yaml"):
         self.logger = CustomLogger(self.__class__.__name__)
-        self.logger.info("Inicializando migración.")
+        self.logger.info("Initializing migration.")
         self.config = ConfigManager.load_config(config_path)
         db_manager = DBManager(config_path)
         self.engine = db_manager.get_engine()
-        self.logger.info("Conexión a la base de datos establecida.")
+        self.logger.info("Database connection established.")
 
     def read_csv_files(self):
         """
-        Lee los archivos CSV especificados en la configuración.
-        Retorna DataFrames para hired_employees, departments y jobs.
+        Reads the CSV files specified in the configuration.
+        Returns DataFrames for hired_employees, departments, and jobs.
         """
-        self.logger.info("Leyendo archivos CSV con metadatos de columnas...")
+        self.logger.info("Reading CSV files with column metadata...")
         csv_config = self.config['csv']
         
         hired_conf = csv_config['hired_employees']
@@ -34,25 +33,25 @@ class Migration:
         jobs_conf = csv_config['jobs']
         jobs = pd.read_csv(jobs_conf['path'], header=0, names=jobs_conf['columns'])
         
-        self.logger.info("Archivos CSV leídos y columnas asignadas correctamente.")
+        self.logger.info("CSV files read and columns assigned successfully.")
         return hired_employees, departments, jobs
 
     def migrate_data(self):
         """
-        Orquesta la migración de datos:
-          - Lee los CSV.
-          - Valida e inserta los datos en la base de datos.
+        Orchestrates the data migration:
+          - Reads the CSV files.
+          - Validates and inserts the data into the database.
         """
-        self.logger.info("Iniciando migración de datos...")
+        self.logger.info("Starting data migration...")
         hired_employees, departments, jobs = self.read_csv_files()
-        self.logger.info("Insertando datos en la base de datos con validación...")
+        self.logger.info("Inserting data into the database with validation...")
         try:
-            process_and_insert(hired_employees, self.config['csv']['hired_employees']['columns'], "hired_employees", self.engine, process_type="migracion")
-            process_and_insert(departments, self.config['csv']['departments']['columns'], "departments", self.engine, process_type="migracion")
-            process_and_insert(jobs, self.config['csv']['jobs']['columns'], "jobs", self.engine, process_type="migracion")
-            self.logger.info("Migración completada con éxito.")
+            process_and_insert(hired_employees, self.config['csv']['hired_employees']['columns'], "hired_employees", self.engine, process_type="migration")
+            process_and_insert(departments, self.config['csv']['departments']['columns'], "departments", self.engine, process_type="migration")
+            process_and_insert(jobs, self.config['csv']['jobs']['columns'], "jobs", self.engine, process_type="migration")
+            self.logger.info("Migration completed successfully.")
         except Exception as e:
-            self.logger.error(f"Error durante la migración: {e}")
+            self.logger.error(f"Error during migration: {e}")
             raise e
 
 if __name__ == "__main__":

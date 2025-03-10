@@ -3,17 +3,16 @@ from core.config_manager import ConfigManager
 
 class DBManager:
     """
-    DBManager se encarga de cargar la configuración de la base de datos y crear el motor SQLAlchemy.
+    DBManager is responsible for loading the database configuration and creating the SQLAlchemy engine.
     """
     def __init__(self, config_path="config.yaml"):
-        # Carga la configuración utilizando ConfigManager
         self.config = ConfigManager.load_config(config_path)
         self.engine = self.create_engine()
 
     def create_engine(self):
         """
-        Crea el motor SQLAlchemy basado en los parámetros de la base de datos definidos en la configuración.
-        :return: Motor SQLAlchemy.
+        Creates the SQLAlchemy engine based on the database parameters defined in the configuration.
+        :return: SQLAlchemy engine.
         """
         db_config = self.config['database']
         user = db_config['user']
@@ -27,14 +26,14 @@ class DBManager:
 
     def get_engine(self):
         """
-        Retorna el motor SQLAlchemy creado.
-        :return: Motor SQLAlchemy.
+        Returns the created SQLAlchemy engine.
+        :return: SQLAlchemy engine.
         """
         return self.engine
 
     def close_connection(self):
         """
-        Cierra todas las conexiones del pool del engine, liberando recursos.
+        Closes all connections from the engine's pool, releasing resources.
         """
         if self.engine:
             self.engine.dispose()

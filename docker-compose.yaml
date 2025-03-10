@@ -10,6 +10,7 @@ services:
       - postgres
     environment:
       - CONFIG_PATH=/app/config.yaml
+      - SECRET_KEY=6q2Qy3P9L3e8Fv9s-Qb7kW7lqv2Sx9V1fR3TzU7q2P7L3e8Fv7sQb7kW7lqv2Sx7
     volumes:
       - ./:/app
 

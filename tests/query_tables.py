@@ -13,34 +13,36 @@ logger = CustomLogger("QueryTables")
 
 def get_expected_columns(table_name: str) -> List[str]:
     """
-    Retorna la lista de columnas esperadas para la tabla, según lo definido en la sección 'csv' del YAML.
+    Returns the list of expected columns for the table, as defined in the 'csv' section of the YAML.
+    :param table_name: Name of the table.
+    :return: List of expected column names.
     """
     config = ConfigManager.load_config()
     return config['csv'][table_name]['columns']
 
 def validate_dataframe(df: pd.DataFrame, expected_columns: List[str], table_name: str) -> None:
     """
-    Valida que el DataFrame no contenga registros con valores nulos en las columnas esperadas.
-    Si se encuentran, se loguean los registros inválidos.
-    :param df: DataFrame a validar.
-    :param expected_columns: Lista de columnas requeridas.
-    :param table_name: Nombre de la tabla (para los logs).
+    Validates that the DataFrame does not contain any records with null values in the expected columns.
+    If any are found, the invalid records are logged.
+    :param df: DataFrame to validate.
+    :param expected_columns: List of required columns.
+    :param table_name: Name of the table (for logging purposes).
     """
     invalid = df[df[expected_columns].isnull().any(axis=1)]
     if not invalid.empty:
-        logger.error(f"Se encontraron registros inválidos (con nulls) en {table_name}:")
+        logger.error(f"Invalid records (with nulls) found in {table_name}:")
         logger.error(invalid)
     else:
-        logger.info(f"No se encontraron registros inválidos en {table_name}.")
+        logger.info(f"No invalid records found in {table_name}.")
 
 def query_table(table_name: str, engine):
     """
-    Consulta todos los registros de la tabla indicada, valida que no contengan nulos
-    en las columnas esperadas y los imprime.
-    :param table_name: Nombre de la tabla a consultar.
-    :param engine: Motor SQLAlchemy para conectarse a la base de datos.
+    Queries all records from the specified table, validates that they do not contain null values
+    in the expected columns, and prints them.
+    :param table_name: Name of the table to query.
+    :param engine: SQLAlchemy engine to connect to the database.
     """
-    logger.info(f"Consultando la tabla '{table_name}'...")
+    logger.info(f"Querying table '{table_name}'...")
     with engine.connect() as connection:
         result = connection.execute(text(f"SELECT * FROM {table_name}"))
         rows = result.fetchall()
@@ -54,7 +56,7 @@ def query_table(table_name: str, engine):
     expected_cols = get_expected_columns(table_name)
     validate_dataframe(df, expected_cols, table_name)
     
-    logger.info(f"Registros en '{table_name}':")
+    logger.info(f"Records in '{table_name}':")
     for row in rows:
         print(row)
 

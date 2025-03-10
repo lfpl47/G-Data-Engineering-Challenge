@@ -6,8 +6,7 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 import plotly.io as pio
-
-
+from core.security import get_current_user  # Import dependency to protect endpoints
 
 router = APIRouter()
 db_manager = DBManager()
@@ -15,14 +14,16 @@ db_manager = DBManager()
 def get_engine():
     return db_manager.get_engine()
 
-@router.get("/metrics/hired_by_quarter", summary="Empleados contratados por departamento y puesto, divididos por trimestre (2021)")
+@router.get("/metrics/hired_by_quarter", summary="Employees hired by department and job, divided by quarter (2021)")
 def hired_by_quarter(
     engine = Depends(get_engine),
-    format: str = Query("json", description="Formato de salida: 'json' o 'html'")):
+    format: str = Query("json", description="Output format: 'json' or 'html'"),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Retorna el número de empleados contratados por trimestre (2021) 
-    por departamento y puesto.
-    Si se solicita 'html', se muestra la tabla y debajo un gráfico interactivo.
+    Returns the number of employees hired in 2021 by department and job,
+    divided by quarter.
+    If 'html' is requested, it returns a table along with an interactive chart.
     """
     try:
         df = pd.read_sql("SELECT * FROM hired_employees", con=engine)
@@ -49,14 +50,12 @@ def hired_by_quarter(
         result = result.fillna("")
 
         if format.lower() == "html":
-
             table_html = result.to_html(index=False, justify="left")
-
+            # Create a combined column for chart labels
             result['Dept - Job'] = result['department'] + " - " + result['job']
-
             fig = px.bar(result, x='Dept - Job', y=['Q1', 'Q2', 'Q3', 'Q4'],
-                         title="Contrataciones por Trimestre (2021) - Detalle por Departamento y Puesto",
-                         labels={"value": "Contrataciones", "Dept - Job": "Departamento - Puesto"})
+                         title="Quarterly Hires (2021) - Details by Department and Job",
+                         labels={"value": "Hires", "Dept - Job": "Department - Job"})
             fig.update_layout(barmode='stack', xaxis_tickangle=-45)
             chart_html = pio.to_html(fig, full_html=False)
 
@@ -67,7 +66,7 @@ def hired_by_quarter(
                 <title>Hired by Quarter</title>
             </head>
             <body>
-                <h1>Empleados Contratados por Trimestre (2021)</h1>
+                <h1>Employees Hired by Quarter (2021)</h1>
                 {table_html}
                 <br/><br/>
                 {chart_html}
@@ -80,14 +79,15 @@ def hired_by_quarter(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/metrics/departments_above_mean", summary="Departamentos que contrataron más que el promedio general en 2021")
+@router.get("/metrics/departments_above_mean", summary="Departments with hires above the overall average in 2021")
 def departments_above_mean(
     engine = Depends(get_engine),
-    format: str = Query("json", description="Formato de salida: 'json' o 'html'")):
+    format: str = Query("json", description="Output format: 'json' or 'html'"),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Retorna la lista de departamentos que contrataron más que el promedio general de 2021.
-    Si se solicita 'html', se muestra la tabla y debajo un gráfico interactivo.
+    Returns a list of departments that hired more than the overall average in 2021.
+    If 'html' is requested, it displays a table along with an interactive chart.
     """
     try:
         df = pd.read_sql("SELECT * FROM hired_employees", con=engine)
@@ -107,20 +107,19 @@ def departments_above_mean(
 
         if format.lower() == "html":
             table_html = result.to_html(index=False, justify="left")
-            
             fig = px.bar(result, x='hired', y='department', orientation='h',
-                         title="Departamentos con Contrataciones sobre el Promedio (2021)",
-                         labels={"department": "Departamento", "hired": "Contrataciones"})
+                         title="Departments with Hires Above Average (2021)",
+                         labels={"department": "Department", "hired": "Hires"})
             chart_html = pio.to_html(fig, full_html=False)
             
             html_content = f"""
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>Departments Above Mean</title>
+                <title>Departments Above Average</title>
             </head>
             <body>
-                <h1>Departamentos con Contrataciones por Encima del Promedio (2021)</h1>
+                <h1>Departments with Hires Above Average (2021)</h1>
                 {table_html}
                 <br/><br/>
                 {chart_html}
