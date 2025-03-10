@@ -1,6 +1,7 @@
 curl -X POST "http://localhost:8000/ingest"   -H "Content-Type: application/json"   -d @payload.json
 
 docker-compose up -d --build
+docker-compose down
 
 docker-compose logs -f app
 
@@ -24,6 +25,12 @@ docker-compose exec app python -m tests.query_tables
 docker-compose exec app python -m data.backup backup
 docker-compose exec app python -m data.backup restore
 
-
+/mnt/c/Users/47/Desktop/globant_challenge
 
 curl -X POST "http://localhost:8000/ingest"   -H "Content-Type: application/json"   -d @payload.json
+
+curl -X POST "http://localhost:8000/migrate" -H "Content-Type: application/json"
+curl -X POST "http://localhost:8000/backup" -H "Content-Type: application/json"
+curl -X POST "http://localhost:8000/backup?table=hired_employees" -H "Content-Type: application/json"
+curl -X POST "http://localhost:8000/backup?table=hired_employees" -H "Content-Type: application/json"
+curl -X POST "http://localhost:8000/backup/restore?table=hired_employees" -H "Content-Type: application/json"

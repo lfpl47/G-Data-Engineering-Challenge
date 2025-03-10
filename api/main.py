@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from pydantic import BaseModel, Field, field_validator
 from typing import List
 import pandas as pd
@@ -6,10 +6,13 @@ from core.custom_logger import CustomLogger
 from core.db_manager import DBManager
 from datetime import datetime
 from core.config_manager import ConfigManager
+from data.backup import backup_table, restore_table
+from data.migration import Migration
 import traceback
 
-app = FastAPI(title="Data Ingestion API", description="API para ingesta de nuevos datos", version="1.0")
-logger = CustomLogger("FastAPI")
+app = FastAPI(title="Data Ingestion A PI", description="API para ingesta de nuevos datos", version="1.0")
+logger = CustomLogger("MainAPI")
+
 
 class HiredEmployee(BaseModel):
     id: int = Field(..., description="Identificador único del empleado")
@@ -99,3 +102,69 @@ def ingest_data(data: IngestData, engine = Depends(get_db_engine)):
         logger.error(f"Error al ingerir datos: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Error ingesting data")
+    
+
+@app.post("/backup", summary="Realiza backup de tablas")
+def backup_endpoint(table: str = Query(None, description="Nombre de la tabla a respaldar. Si se omite, se respaldan todas las tablas")):
+    """
+    Endpoint para realizar backup.
+    
+    - Si se especifica el parámetro "table", se hace backup de esa tabla.
+    - Si no se especifica, se respaldan todas las tablas definidas en la sección "csv" del YAML.
+    """
+    try:
+        config = ConfigManager.load_config()
+        # Si se especifica una tabla, usarla; de lo contrario, respaldar todas las tablas.
+        if table:
+            logger.info(f"Realizando backup de la tabla {table}.")
+            backup_table(table)
+            return {"message": f"Backup de {table} completado."}
+        else:
+            # Derivar las tablas de las claves de la sección "csv"
+            tables = list(config.get("csv", {}).keys())
+            for tbl in tables:
+                logger.info(f"Realizando backup de la tabla {tbl}.")
+                backup_table(tbl)
+            return {"message": "Backup de todas las tablas completado."}
+    except Exception as e:
+        logger.error(f"Error en backup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/restore", summary="Restaura tablas desde backup")
+def restore_endpoint(table: str = Query(None, description="Nombre de la tabla a restaurar. Si se omite, se restauran todas las tablas")):
+    """
+    Endpoint para restaurar tablas.
+    
+    - Si se especifica el parámetro "table", se restaura la tabla indicada.
+    - Si no se especifica, se restauran todas las tablas según la configuración en backup.files del YAML.
+    """
+    try:
+        config = ConfigManager.load_config()
+        if table:
+            logger.info(f"Restaurando la tabla {table}.")
+            restore_table(table)
+            return {"message": f"Restauración de {table} completada."}
+        else:
+            tables = list(config.get("csv", {}).keys())
+            for tbl in tables:
+                logger.info(f"Restaurando la tabla {tbl}.")
+                restore_table(tbl)
+            return {"message": "Restauración de todas las tablas completada."}
+    except Exception as e:
+        logger.error(f"Error en restauración: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+@app.post("/migrate", summary="Migración de datos CSV a la base de datos")
+def migrate_endpoint():
+    """
+    Endpoint que inicia la migración de datos desde los archivos CSV a la base de datos.
+    Llama al proceso de migración definido en el módulo data.migration.
+    """
+    try:
+        migration = Migration()
+        migration.migrate_data()
+        return {"message": "Migración completada con éxito."}
+    except Exception as e:
+        logger.error(f"Error en endpoint de migración: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

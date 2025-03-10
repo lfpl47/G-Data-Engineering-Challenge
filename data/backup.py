@@ -2,7 +2,7 @@ import os
 import yaml
 import pandas as pd
 from fastavro import writer, reader, parse_schema
-from sqlalchemy import text
+from sqlalchemy import text, inspect, MetaData, Table, Column, String
 from core.db_manager import DBManager
 from core.custom_logger import CustomLogger
 from core.config_manager import ConfigManager
@@ -100,18 +100,19 @@ def backup_table(table_name: str, config_path="config.yaml") -> None:
 def restore_table(table_name: str, config_path="config.yaml"):
     """
     Restaura los datos de una tabla a partir de un archivo AVRO.
-    Lee el path del backup desde el archivo de configuración.
+    Si la tabla no existe, la crea usando la estructura definida en el YAML (todos los campos como TEXT).
+    Si ya existe, se agregan los datos (modo "append").
+    
     :param table_name: Nombre de la tabla a restaurar.
-    :param config_path: Ruta al archivo YAML de configuración.
+    :param config_path: Ruta al archivo de configuración YAML.
     """
     config = ConfigManager.load_config(config_path)
     backup_file = config.get("backup", {}).get("files", {}).get(table_name)
     if not backup_file or not os.path.exists(backup_file):
         logger.error(f"No se encontró backup para la tabla {table_name} en config.yaml.")
         return
-    
+
     logger.info(f"Iniciando restauración de la tabla {table_name} desde {backup_file}.")
-    from fastavro import reader
     records = []
     with open(backup_file, "rb") as fo:
         for record in reader(fo):
@@ -120,15 +121,32 @@ def restore_table(table_name: str, config_path="config.yaml"):
     if not records:
         logger.warning("No se encontraron registros en el backup.")
         return
-    
+
     df = pd.DataFrame(records)
-    db_manager = DBManager()
+    db_manager = DBManager(config_path)
     engine = db_manager.get_engine()
     
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        logger.info(f"La tabla {table_name} no existe. Creándola usando la estructura definida en el YAML.")
+        table_conf = config.get("csv", {}).get(table_name, {})
+        columns = table_conf.get("columns", [])
+        if not columns:
+            logger.error(f"No se encontraron columnas definidas para la tabla {table_name} en config.yaml.")
+            return
+        metadata = MetaData()
+        # Crear columnas como TEXT (puedes ajustar los tipos según lo necesites)
+        cols = [Column(col, String) for col in columns]
+        new_table = Table(table_name, metadata, *cols)
+        metadata.create_all(engine)
+        logger.info(f"Tabla {table_name} creada exitosamente.")
+    
+    # Si la tabla existe, simplemente se agregan los datos (append)
     with engine.begin() as connection:
-        df.to_sql(table_name, con=connection, if_exists="replace", index=False)
+        df.to_sql(table_name, con=connection, if_exists="append", index=False)
     logger.info(f"Restauración de la tabla {table_name} completada.")
-
+    
+    
 def main():
     import sys
     config = ConfigManager.load_config()
